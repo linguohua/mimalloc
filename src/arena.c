@@ -471,7 +471,7 @@ int mi_reserve_huge_os_pages(size_t pages, double max_secs, size_t* pages_reserv
 void mi_do_reserve_huge_os_pages(size_t pages) {
   size_t offset = mi_option_get(mi_option_use_numa_offset);
   size_t numa_count = _mi_os_numa_node_count_get();
-  size_t last_numa = offset + numa_count;
+  size_t last_numa = numa_count;
   size_t remains = pages;
   _mi_verbose_message("reserve huge os page, required:%d, numa offset:%d, numa:%d\n", pages, offset, numa_count);
 
@@ -482,7 +482,7 @@ void mi_do_reserve_huge_os_pages(size_t pages) {
     if (err)  {
       _mi_verbose_message("reserve huge os page at:%d failed, err:%d, page got:%d\n", numa_node, err, got);
     } else {
-      _mi_verbose_message("reserve huge os page at:%d ok, page got:%d\n", numa_node, err, got);
+      _mi_verbose_message("reserve huge os page at:%d ok, page got:%d\n", numa_node, got);
     }
 
     remains = remains - got;
