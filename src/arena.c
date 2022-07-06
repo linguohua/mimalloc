@@ -216,7 +216,7 @@ void* _mi_arena_alloc_aligned(size_t size, size_t alignment, bool* commit, bool*
     return NULL;
   }
   *is_zero = true;
-  *memid   = MI_MEMID_OS;  
+  *memid   = MI_MEMID_OS;
   void* p = _mi_os_alloc_aligned(size, alignment, *commit, large, tld->stats);
   if (p != NULL) *is_pinned = *large;
   return p;
@@ -268,7 +268,7 @@ void _mi_arena_free(void* p, size_t size, size_t memid, bool all_committed, mi_o
       _mi_os_decommit(p, blocks * MI_ARENA_BLOCK_SIZE, tld->stats); // ok if this fails
       _mi_bitmap_unclaim_across(arena->blocks_committed, arena->field_count, blocks, bitmap_idx);
     }
-    // and make it available to others again 
+    // and make it available to others again
     bool all_inuse = _mi_bitmap_unclaim_across(arena->blocks_inuse, arena->field_count, blocks, bitmap_idx);
     if (!all_inuse) {
       _mi_error_message(EAGAIN, "trying to free an already freed block: %p, size %zu\n", p, size);
@@ -340,7 +340,7 @@ bool mi_manage_os_memory(void* start, size_t size, bool is_committed, bool is_la
 }
 
 // Reserve a range of regular OS memory
-int mi_reserve_os_memory(size_t size, bool commit, bool allow_large) mi_attr_noexcept 
+int mi_reserve_os_memory(size_t size, bool commit, bool allow_large) mi_attr_noexcept
 {
   size = _mi_align_up(size, MI_ARENA_BLOCK_SIZE); // at least one block
   bool large = allow_large;
@@ -408,6 +408,29 @@ int mi_reserve_huge_os_pages_at(size_t pages, int numa_node, size_t timeout_msec
 }
 
 
+// reserve at a specific numa node
+static int mi_reserve_huge_os_pages_at2(size_t pages, int numa_node, size_t timeout_msecs, size_t* pages_got) mi_attr_noexcept {
+  if (pages==0) return 0;
+  if (numa_node < -1) numa_node = -1;
+  if (numa_node >= 0) numa_node = numa_node % _mi_os_numa_node_count();
+  size_t hsize = 0;
+  size_t pages_reserved = 0;
+  void* p = _mi_os_alloc_huge_os_pages(pages, numa_node, timeout_msecs, &pages_reserved, &hsize);
+  if (p==NULL || pages_reserved==0) {
+    _mi_warning_message("failed to reserve %zu gb huge pages\n", pages);
+    return ENOMEM;
+  }
+
+  *pages_got = pages_reserved;
+  _mi_verbose_message("numa node %i: reserved %zu gb huge pages (of the %zu gb requested)\n", numa_node, pages_reserved, pages);
+
+  if (!mi_manage_os_memory(p, hsize, true, true, true, numa_node)) {
+    _mi_os_free_huge_pages(p, hsize, &_mi_stats_main);
+    return ENOMEM;
+  }
+  return 0;
+}
+
 // reserve huge pages evenly among the given number of numa nodes (or use the available ones as detected)
 int mi_reserve_huge_os_pages_interleave(size_t pages, size_t numa_nodes, size_t timeout_msecs) mi_attr_noexcept {
   if (pages == 0) return 0;
@@ -443,4 +466,27 @@ int mi_reserve_huge_os_pages(size_t pages, double max_secs, size_t* pages_reserv
   int err = mi_reserve_huge_os_pages_interleave(pages, 0, (size_t)(max_secs * 1000.0));
   if (err==0 && pages_reserved!=NULL) *pages_reserved = pages;
   return err;
+}
+
+void mi_do_reserve_huge_os_pages(size_t pages) {
+  size_t offset = mi_option_get(mi_option_use_numa_offset);
+  size_t numa_count = _mi_os_numa_node_count_get();
+  size_t last_numa = offset + numa_count;
+  size_t remains = pages;
+  _mi_verbose_message("reserve huge os page, required:%d, numa offset:%d, numa:%d\n", pages, offset, numa_count);
+
+  for (size_t numa_node = offset; numa_node < last_numa && remains > 0; numa_node++) {
+    size_t node_pages = remains;  // can be 0
+    size_t got = 0;
+    int err = mi_reserve_huge_os_pages_at2(node_pages, (int)numa_node, 0, &got);
+    if (err)  {
+      _mi_verbose_message("reserve huge os page at:%d failed, err:%d, page got:%d\n", numa_node, err, got);
+    } else {
+      _mi_verbose_message("reserve huge os page at:%d ok, page got:%d\n", numa_node, err, got);
+    }
+
+    remains = remains - got;
+  }
+
+  _mi_verbose_message("reserve huge os page, required:%d, got:%d\n", pages, pages - remains);
 }

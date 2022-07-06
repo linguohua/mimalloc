@@ -281,7 +281,7 @@ static bool _mi_heap_init(void) {
     tld->segments.stats = &tld->stats;
     tld->segments.os = &tld->os;
     tld->os.stats = &tld->stats;
-    _mi_heap_set_default_direct(heap);    
+    _mi_heap_set_default_direct(heap);
   }
   return false;
 }
@@ -314,9 +314,9 @@ static bool _mi_heap_done(mi_heap_t* heap) {
   if (heap != &_mi_heap_main) {
     _mi_heap_collect_abandon(heap);
   }
-  
+
   // merge stats
-  _mi_stats_done(&heap->tld->stats);  
+  _mi_stats_done(&heap->tld->stats);
 
   // free if not the main thread
   if (heap != &_mi_heap_main) {
@@ -326,6 +326,7 @@ static bool _mi_heap_done(mi_heap_t* heap) {
     // mi_assert_internal(heap->tld->segments.count == 0 || heap->thread_id != _mi_thread_id());
     mi_thread_data_free((mi_thread_data_t*)heap);
   }
+
   else {
     mi_thread_data_collect(); // free cached thread metadata  
     #if 0  
@@ -364,7 +365,7 @@ static void _mi_thread_done(mi_heap_t* default_heap);
   // use thread local storage keys to detect thread ending
   #include <windows.h>
   #include <fibersapi.h>
-  #if (_WIN32_WINNT < 0x600)  // before Windows Vista 
+  #if (_WIN32_WINNT < 0x600)  // before Windows Vista
   WINBASEAPI DWORD WINAPI FlsAlloc( _In_opt_ PFLS_CALLBACK_FUNCTION lpCallback );
   WINBASEAPI PVOID WINAPI FlsGetValue( _In_ DWORD dwFlsIndex );
   WINBASEAPI BOOL  WINAPI FlsSetValue( _In_ DWORD dwFlsIndex, _In_opt_ PVOID lpFlsData );
@@ -419,7 +420,7 @@ void mi_thread_init(void) mi_attr_noexcept
 {
   // ensure our process has started already
   mi_process_init();
-  
+
   // initialize the thread local default heap
   // (this will call `_mi_heap_set_default_direct` and thus set the
   //  fiber/pthread key to a non-zero value, ensuring `_mi_thread_done` is called)
@@ -440,7 +441,7 @@ static void _mi_thread_done(mi_heap_t* heap) {
 
   // check thread-id as on Windows shutdown with FLS the main (exit) thread may call this on thread-local heaps...
   if (heap->thread_id != _mi_thread_id()) return;
-  
+
   // abandon the thread local heap
   if (_mi_heap_done(heap)) return;  // returns true if already ran
 }
@@ -597,6 +598,7 @@ void mi_process_init(void) mi_attr_noexcept {
       mi_reserve_huge_os_pages_interleave(pages, 0, pages*500);
     }
   } 
+
   if (mi_option_is_enabled(mi_option_reserve_os_memory)) {
     long ksize = mi_option_get(mi_option_reserve_os_memory);
     if (ksize > 0) {
@@ -630,7 +632,7 @@ static void mi_process_done(void) {
   if (mi_option_is_enabled(mi_option_show_stats) || mi_option_is_enabled(mi_option_verbose)) {
     mi_stats_print(NULL);
   }
-  mi_allocator_done();  
+  mi_allocator_done();
   _mi_verbose_message("process done: 0x%zx\n", _mi_heap_main.thread_id);
   os_preloading = true; // don't call the C runtime anymore
 }

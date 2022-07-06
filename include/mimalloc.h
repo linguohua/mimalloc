@@ -157,8 +157,8 @@ mi_decl_export void mi_thread_init(void)      mi_attr_noexcept;
 mi_decl_export void mi_thread_done(void)      mi_attr_noexcept;
 mi_decl_export void mi_thread_stats_print_out(mi_output_fun* out, void* arg) mi_attr_noexcept;
 
-mi_decl_export void mi_process_info(size_t* elapsed_msecs, size_t* user_msecs, size_t* system_msecs, 
-                                    size_t* current_rss, size_t* peak_rss, 
+mi_decl_export void mi_process_info(size_t* elapsed_msecs, size_t* user_msecs, size_t* system_msecs,
+                                    size_t* current_rss, size_t* peak_rss,
                                     size_t* current_commit, size_t* peak_commit, size_t* page_faults) mi_attr_noexcept;
 
 // -------------------------------------------------------------------------------------
@@ -274,6 +274,7 @@ mi_decl_export int  mi_reserve_os_memory(size_t size, bool commit, bool allow_la
 mi_decl_export bool mi_manage_os_memory(void* start, size_t size, bool is_committed, bool is_large, bool is_zero, int numa_node) mi_attr_noexcept;
 
 mi_decl_export void mi_debug_show_arenas(void) mi_attr_noexcept;
+mi_decl_export void mi_do_reserve_huge_os_pages(size_t pages);
 
 // deprecated
 mi_decl_export int  mi_reserve_huge_os_pages(size_t pages, double max_secs, size_t* pages_reserved) mi_attr_noexcept;
@@ -331,6 +332,7 @@ typedef enum mi_option_e {
   mi_option_allow_decommit,
   mi_option_segment_decommit_delay,  
   mi_option_decommit_extend_delay,
+  mi_option_use_numa_offset,
   _mi_option_last
 } mi_option_t;
 
