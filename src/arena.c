@@ -421,13 +421,14 @@ static int mi_reserve_huge_os_pages_at2(size_t pages, int numa_node, size_t time
     return ENOMEM;
   }
 
-  *pages_got = pages_reserved;
   _mi_verbose_message("numa node %i: reserved %zu gb huge pages (of the %zu gb requested)\n", numa_node, pages_reserved, pages);
 
   if (!mi_manage_os_memory(p, hsize, true, true, true, numa_node)) {
     _mi_os_free_huge_pages(p, hsize, &_mi_stats_main);
     return ENOMEM;
   }
+  
+  *pages_got = pages_reserved;
   return 0;
 }
 
